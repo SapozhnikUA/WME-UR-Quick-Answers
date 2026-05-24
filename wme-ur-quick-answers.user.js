@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME UR Quick Answers
 // @namespace    https://github.com/SapozhnikUA/WME-UR-Quick-Answers
-// @version      1.9
+// @version      1.10
 // @description  Швидкі відповіді на UR — кнопки ✓ ✗ ? у панелі звіту
 // @homepageURL  https://github.com/SapozhnikUA/WME-UR-Quick-Answers
 // @downloadURL  https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Quick-Answers/main/wme-ur-quick-answers.user.js
@@ -171,34 +171,34 @@
     // Отримати ID відкритого UR
     // =========================================================================
     function getOpenUrId() {
-        // 1️⃣ Перший пріоритет – отримати відкритий UR через SDK (надсучасніший та динамічний)
-        if (sdk && sdk.DataModel) {
-            try {
-                const all = sdk.DataModel.MapUpdateRequests.getAll();
-                // Шукаємо відкритий та редагований запит
-                const candidate = all.find(u => u.isOpen && u.isEditable);
-                if (candidate && candidate.id) {
-                    return Number(candidate.id);
-                }
-            } catch (_) { /* ignore SDK errors */ }
-        }
-        // 2️⃣ Якщо SDK не врізався, пробуємо отримати ID з URL (запасний варіант)
-        const urlMatch = location.search.match(/[?&]urs=(\d+)/);
-        if (urlMatch) return Number(urlMatch[1]);
-        // 3️⃣ Пошук ID в textarea або його батьківській картці
-        const textarea = document.querySelector('.overlay-container wz-card.mapUpdateRequest textarea, .overlay-container wz-card.mapUpdateRequest [contenteditable="true"]');
-        if (textarea) {
-            const card = textarea.closest('.mapUpdateRequest');
-            if (card) {
+        // 1️⃣ Перший пріоритет – знайти видиму (відкриту) картку UR у DOM (надійніше, бо саме вона активна)
+        const cards = document.querySelectorAll('.overlay-container wz-card.mapUpdateRequest');
+        for (const card of cards) {
+            if (card.offsetParent !== null) { // видима
                 const raw = card.getAttribute('data-id') || card.id || '';
                 const m = raw.match(/\d+/);
                 if (m) return Number(m[0]);
             }
         }
-        // 4️⃣ Пошук видимих карток UR у DOM
-        const cards = document.querySelectorAll('.overlay-container wz-card.mapUpdateRequest');
-        for (const card of cards) {
-            if (card.offsetParent !== null) {
+        // 2️⃣ Якщо DOM не дав результату, спробувати SDK (може містити відкриті, які ще не відображені)
+        if (sdk && sdk.DataModel) {
+            try {
+                const all = sdk.DataModel.MapUpdateRequests.getAll();
+                // Шукаємо запит, який маркований як open і editable
+                const candidate = all.find(u => (u.isOpen || u.state === 'open') && (u.isEditable || u.editable));
+                if (candidate && candidate.id) {
+                    return Number(candidate.id);
+                }
+            } catch (_) { /* ignore SDK errors */ }
+        }
+        // 3️⃣ Запасний варіант – ID з URL
+        const urlMatch = location.search.match(/[?&]urs=(\d+)/);
+        if (urlMatch) return Number(urlMatch[1]);
+        // 4️⃣ Пошук в textarea або її батьківській картці (як остання інша спроба)
+        const textarea = document.querySelector('.overlay-container wz-card.mapUpdateRequest textarea, .overlay-container wz-card.mapUpdateRequest [contenteditable="true"]');
+        if (textarea) {
+            const card = textarea.closest('.mapUpdateRequest');
+            if (card) {
                 const raw = card.getAttribute('data-id') || card.id || '';
                 const m = raw.match(/\d+/);
                 if (m) return Number(m[0]);
