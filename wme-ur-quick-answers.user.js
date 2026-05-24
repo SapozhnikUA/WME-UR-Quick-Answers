@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME UR Quick Answers
 // @namespace    https://github.com/SapozhnikUA/WME-UR-Quick-Answers
-// @version      1.4
+// @version      1.5
 // @description  Швидкі відповіді на UR — кнопки ✓ ✗ ? у панелі звіту
 // @homepageURL  https://github.com/SapozhnikUA/WME-UR-Quick-Answers
 // @downloadURL  https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Quick-Answers/main/wme-ur-quick-answers.user.js
@@ -63,6 +63,7 @@
             closedAs:      'Закрито як',
             panelAdded:    'Кнопки додано до панелі UR',
             observerOn:    'MutationObserver запущено',
+            clipboardFallback: 'Textarea не знайдено — текст скопійовано в буфер обміну',
             defaultYes:    'Дякуємо за допомогу!\nПроблему вирішено. Оновлення мапи за декілька днів.\nПриєднуйтесь до наших спільнот у соціальних мережах.\nУсі посилання можна знайти на сторінці http://waze.com.ua',
             defaultNo:     'На жаль, ми не отримали достатньо інформації для виправлення помилки.\nУ випадку виникнення помилки повторно, або якщо у Вас є зауваження, надішліть, будь ласка, новий звіт.\nПриєднуйтесь до наших спільнот у соціальних мережах.\nУсі посилання можна знайти на сторінці http://waze.com.ua',
             defaultAsk:    "Дякуємо за пильність.\nБудьте ласкаві, надайте більш детальну інформацію про помилку.\nПомилка без коментарів буде закрита як нез'ясована.",
@@ -94,6 +95,7 @@
             closedAs:      'Închis ca',
             panelAdded:    'Butoane adăugate la panoul UR',
             observerOn:    'MutationObserver pornit',
+            clipboardFallback: 'Textarea nu a fost găsită — text copiat în clipboard',
             defaultYes:    'Vă mulțumim pentru ajutor!\nProblema a fost rezolvată. Actualizările hărții vor apărea în câteva zile.\nAlăturați-vă comunităților noastre din rețelele sociale.\nToate linkurile le găsiți pe pagina http://waze.com.ua',
             defaultNo:     'Din păcate, nu am primit suficiente informații pentru a remedia eroarea.\nDacă problema reapare sau aveți observații, vă rugăm să trimiteți un nou raport.\nAlăturați-vă comunităților noastre din rețelele sociale.\nToate linkurile le găsiți pe pagina http://waze.com.ua',
             defaultAsk:    'Vă mulțumim pentru vigilență.\nVă rugăm să furnizați informații mai detaliate despre eroare.\nErorile fără comentarii vor fi închise ca neidentificate.',
@@ -125,6 +127,7 @@
             closedAs:      'Closed as',
             panelAdded:    'Buttons added to UR panel',
             observerOn:    'MutationObserver started',
+            clipboardFallback: 'Textarea not found — text copied to clipboard',
             defaultYes:    'Thank you for your help!\nThe issue has been resolved. Map updates will appear within a few days.\nJoin our communities on social media.\nAll links can be found at http://waze.com.ua',
             defaultNo:     'Unfortunately, we did not receive enough information to fix the error.\nIf the issue recurs or you have any comments, please submit a new report.\nJoin our communities on social media.\nAll links can be found at http://waze.com.ua',
             defaultAsk:    'Thank you for your attention.\nPlease provide more detailed information about the error.\nReports without comments will be closed as not identified.',
@@ -180,6 +183,7 @@
         if (urlMatch) return Number(urlMatch[1]);
         // Спроба 3: перший відкритий та редагований через SDK
         try {
+            if (!sdk || !sdk.DataModel) return null;
             const all = sdk.DataModel.MapUpdateRequests.getAll();
             const candidate = all.find(u => u.isOpen && u.isEditable);
             if (candidate) return candidate.id;
@@ -191,15 +195,19 @@
     // Вставити текст у textarea в DOM
     // Використовуємо React nativeSetter щоб фреймворк "побачив" зміну
     // =========================================================================
-    function insertCommentText(text) {
+    async function insertCommentText(text) {
         const ta = document.querySelector(
             '.overlay-container wz-card.mapUpdateRequest textarea,' +
             '.overlay-container wz-card.mapUpdateRequest wz-textarea textarea'
         );
         if (!ta) {
             // Textarea не знайдено — скопіювати в буфер як запасний варіант
-            navigator.clipboard?.writeText(text).catch(() => {});
-            log('textarea не знайдено — текст скопійовано в буфер');
+            try {
+                await navigator.clipboard.writeText(text);
+                log(`${T.clipboardFallback || 'Textarea не знайдено — текст скопійовано в буфер обміну'}`);
+            } catch (e) {
+                logErr('Clipboard copy failed', e);
+            }
             return false;
         }
 
@@ -263,7 +271,7 @@
 
         // Кнопка «?» без надсилання — тільки вставляємо в textarea і виходимо
         if (!cfg.sendComment && !cfg.closeReport) {
-            insertCommentText(cfg.text);
+            await insertCommentText(cfg.text);
             return;
         }
 
@@ -280,7 +288,7 @@
         // Закрити звіт
         if (cfg.closeReport) {
             try {
-                sdk.DataModel.MapUpdateRequests.updateResolutionState({
+                await sdk.DataModel.MapUpdateRequests.updateResolutionState({
                     mapUpdateRequestId: urId,
                     resolutionState: cfg.closeAs,
                 });
