@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME UR Quick Answers
 // @namespace    https://github.com/SapozhnikUA/WME-UR-Quick-Answers
-// @version      1.6
+// @version      1.7
 // @description  Швидкі відповіді на UR — кнопки ✓ ✗ ? у панелі звіту
 // @homepageURL  https://github.com/SapozhnikUA/WME-UR-Quick-Answers
 // @downloadURL  https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Quick-Answers/main/wme-ur-quick-answers.user.js
@@ -171,34 +171,55 @@
     // Отримати ID відкритого UR
     // =========================================================================
     function getOpenUrId() {
-        // Спроба 1: data-id на картці
-        const card = document.querySelector('.overlay-container wz-card.mapUpdateRequest');
-        if (card) {
-            const raw = card.getAttribute('data-id') || card.getAttribute('id') || '';
-            const m = raw.match(/\d+/);
-            if (m) return Number(m[0]);
-        }
-        // Спроба 2: URL-параметр ?urs=123
+        // 1️⃣ Спробувати знайти ID з URL (найнадійніше)
         const urlMatch = location.search.match(/[?&]urs=(\d+)/);
         if (urlMatch) return Number(urlMatch[1]);
-        // Спроба 3: перший відкритий та редагований через SDK
+
+        // 2️⃣ Якщо текстове поле вже присутнє в DOM, взяти ID з його батьківської картки
+        const textarea = document.querySelector('.overlay-container wz-card.mapUpdateRequest textarea, .overlay-container wz-card.mapUpdateRequest [contenteditable="true"]');
+        if (textarea) {
+            const card = textarea.closest('.mapUpdateRequest');
+            if (card) {
+                const raw = card.getAttribute('data-id') || card.id || '';
+                const m = raw.match(/\d+/);
+                if (m) return Number(m[0]);
+            }
+        }
+
+        // 3️⃣ Пошук видимих карток UR у DOM (уникаємо прихованих)
+        const cards = document.querySelectorAll('.overlay-container wz-card.mapUpdateRequest');
+        for (const card of cards) {
+            if (card.offsetParent !== null) {
+                const raw = card.getAttribute('data-id') || card.id || '';
+                const m = raw.match(/\d+/);
+                if (m) return Number(m[0]);
+            }
+        }
+
+        // 4️⃣ Фідбек через SDK – останній резерв
         try {
-            if (!sdk || !sdk.DataModel) return null;
-            const all = sdk.DataModel.MapUpdateRequests.getAll();
-            const candidate = all.find(u => u.isOpen && u.isEditable);
-            if (candidate) return candidate.id;
+            if (sdk && sdk.DataModel) {
+                const all = sdk.DataModel.MapUpdateRequests.getAll();
+                const candidate = all.find(u => u.isOpen && u.isEditable);
+                if (candidate) return candidate.id;
+            }
         } catch (_) { /* ігноруємо */ }
+
         return null;
     }
+        
 
     // =========================================================================
     // Вставити текст у textarea в DOM
     // Використовуємо React nativeSetter щоб фреймворк "побачив" зміну
     // =========================================================================
 async function insertCommentText(text) {
-        const ta = document.querySelector(
+        // Додаткові кроки для поліпшення сумісності з різними UI‑фреймворками та різними шаблонами textarea
+        // Пошук textarea або елементу з contenteditable
+        let ta = document.querySelector(
             '.overlay-container wz-card.mapUpdateRequest textarea,' +
-            '.overlay-container wz-card.mapUpdateRequest wz-textarea textarea'
+            '.overlay-container wz-card.mapUpdateRequest wz-textarea textarea,' +
+            '.overlay-container wz-card.mapUpdateRequest [contenteditable="true"]'
         );
         if (!ta) {
             // Textarea не знайдено – копіюємо в буфер як запасний варіант
@@ -210,12 +231,18 @@ async function insertCommentText(text) {
             }
             return false;
         }
-
+        // Якщо це contenteditable, використаємо execCommand для вставки
+        if (ta.isContentEditable) {
+            ta.focus();
+            if (document.execCommand && document.execCommand('insertText', false, text)) {
+                log('Текст успішно вставлено у contenteditable');
+                return true;
+            }
+        }
         // Спробуємо встановити значення так, щоб React/Angular/модуль UI побачив зміну
         const nativeSetter = Object.getOwnPropertyDescriptor(
             window.HTMLTextAreaElement.prototype, 'value'
         )?.set;
-
         if (nativeSetter) {
             nativeSetter.call(ta, text);
         }
@@ -224,12 +251,10 @@ async function insertCommentText(text) {
         ta.setAttribute('value', text);
         // Виділяємо весь текст – іноді UI оновлює лише при виділенні
         if (typeof ta.select === 'function') ta.select();
-
         // Тригеримо події, які очікує UI (input, change, keydown, keyup) і фокусуємо поле
         const inputEvent = new InputEvent('input', { bubbles: true, cancelable: true, data: text, inputType: 'insertText' });
         ta.dispatchEvent(inputEvent);
         ta.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-        // Додаткові клавіатурні події для React‑візуальності
         ta.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
         ta.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
         ta.focus();
@@ -247,6 +272,8 @@ async function insertCommentText(text) {
         log('Текст успішно вставлено у textarea та події відправлені');
         return true;
     }
+
+async function sendComment(urId, text) {
         try {
             await sdk.DataModel.MapUpdateRequests.getUpdateRequestDetails({
                 mapUpdateRequestId: urId,
@@ -255,7 +282,6 @@ async function insertCommentText(text) {
             log(`${T.noSession}: ${e?.message}`);
             return false;
         }
-
         try {
             await sdk.DataModel.MapUpdateRequests.addComment({
                 mapUpdateRequestId: urId,
@@ -264,8 +290,6 @@ async function insertCommentText(text) {
             log(`${T.commentSent} #${urId}`);
             return true;
         } catch (e) {
-            // DataModelNotFoundError — сесія все одно не завантажилась,
-            // не блокуємо закриття UR
             log(`${T.noSession}: ${e?.message}`);
             return false;
         }
