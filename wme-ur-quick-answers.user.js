@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME UR Quick Answers
 // @namespace    https://github.com/SapozhnikUA/WME-UR-Quick-Answers
-// @version      1.7
+// @version      1.8
 // @description  Швидкі відповіді на UR — кнопки ✓ ✗ ? у панелі звіту
 // @homepageURL  https://github.com/SapozhnikUA/WME-UR-Quick-Answers
 // @downloadURL  https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Quick-Answers/main/wme-ur-quick-answers.user.js
@@ -171,11 +171,21 @@
     // Отримати ID відкритого UR
     // =========================================================================
     function getOpenUrId() {
-        // 1️⃣ Спробувати знайти ID з URL (найнадійніше)
+        // 1️⃣ Перший пріоритет – отримати відкритий UR через SDK (надсучасніший та динамічний)
+        if (sdk && sdk.DataModel) {
+            try {
+                const all = sdk.DataModel.MapUpdateRequests.getAll();
+                // Шукаємо відкритий та редагований запит
+                const candidate = all.find(u => u.isOpen && u.isEditable);
+                if (candidate && candidate.id) {
+                    return Number(candidate.id);
+                }
+            } catch (_) { /* ignore SDK errors */ }
+        }
+        // 2️⃣ Якщо SDK не врізався, пробуємо отримати ID з URL (запасний варіант)
         const urlMatch = location.search.match(/[?&]urs=(\d+)/);
         if (urlMatch) return Number(urlMatch[1]);
-
-        // 2️⃣ Якщо текстове поле вже присутнє в DOM, взяти ID з його батьківської картки
+        // 3️⃣ Пошук ID в textarea або його батьківській картці
         const textarea = document.querySelector('.overlay-container wz-card.mapUpdateRequest textarea, .overlay-container wz-card.mapUpdateRequest [contenteditable="true"]');
         if (textarea) {
             const card = textarea.closest('.mapUpdateRequest');
@@ -185,8 +195,7 @@
                 if (m) return Number(m[0]);
             }
         }
-
-        // 3️⃣ Пошук видимих карток UR у DOM (уникаємо прихованих)
+        // 4️⃣ Пошук видимих карток UR у DOM
         const cards = document.querySelectorAll('.overlay-container wz-card.mapUpdateRequest');
         for (const card of cards) {
             if (card.offsetParent !== null) {
@@ -195,19 +204,8 @@
                 if (m) return Number(m[0]);
             }
         }
-
-        // 4️⃣ Фідбек через SDK – останній резерв
-        try {
-            if (sdk && sdk.DataModel) {
-                const all = sdk.DataModel.MapUpdateRequests.getAll();
-                const candidate = all.find(u => u.isOpen && u.isEditable);
-                if (candidate) return candidate.id;
-            }
-        } catch (_) { /* ігноруємо */ }
-
+        // 5️⃣ Якщо нічого не знайдено – null
         return null;
-    }
-        
 
     // =========================================================================
     // Вставити текст у textarea в DOM
