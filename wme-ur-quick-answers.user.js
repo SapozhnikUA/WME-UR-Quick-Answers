@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         WME UR Quick Answers
 // @namespace    https://github.com/SapozhnikUA/WME-UR-Quick-Answers
-// @version      1.3
+// @version      1.4
 // @description  Швидкі відповіді на UR — кнопки ✓ ✗ ? у панелі звіту
 // @homepageURL  https://github.com/SapozhnikUA/WME-UR-Quick-Answers
-// @downloadURL  https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Auto-Closer/main/wme-ur-quick-answers.user.js
-// @updateURL    https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Auto-Closer/main/wme-ur-quick-answers.user.js
+// @downloadURL  https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Quick-Answers/main/wme-ur-quick-answers.user.js
+// @updateURL    https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Quick-Answers/main/wme-ur-quick-answers.user.js
 // @author       SapozhnikUA
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
 // @grant        none
