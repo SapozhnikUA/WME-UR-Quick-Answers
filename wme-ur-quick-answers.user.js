@@ -195,13 +195,13 @@
     // Вставити текст у textarea в DOM
     // Використовуємо React nativeSetter щоб фреймворк "побачив" зміну
     // =========================================================================
-    async function insertCommentText(text) {
+async function insertCommentText(text) {
         const ta = document.querySelector(
             '.overlay-container wz-card.mapUpdateRequest textarea,' +
             '.overlay-container wz-card.mapUpdateRequest wz-textarea textarea'
         );
         if (!ta) {
-            // Textarea не знайдено — скопіювати в буфер як запасний варіант
+            // Textarea не знайдено – копіюємо в буфер як запасний варіант
             try {
                 await navigator.clipboard.writeText(text);
                 log(`${T.clipboardFallback || 'Textarea не знайдено — текст скопійовано в буфер обміну'}`);
@@ -218,27 +218,35 @@
 
         if (nativeSetter) {
             nativeSetter.call(ta, text);
-        } else {
-            // fallback, якщо native setter недоступний
-            ta.value = text;
         }
+        // Додаткова гарантія – явно присвоюємо value і атрибут
+        ta.value = text;
+        ta.setAttribute('value', text);
+        // Виділяємо весь текст – іноді UI оновлює лише при виділенні
+        if (typeof ta.select === 'function') ta.select();
 
-        // Тригеримо події, які очікує фреймворк (input + change) та фокусуємо поле
-        ta.dispatchEvent(new Event('input', { bubbles: true }));
-        ta.dispatchEvent(new Event('change', { bubbles: true }));
+        // Тригеримо події, які очікує UI (input, change, keydown, keyup) і фокусуємо поле
+        const inputEvent = new InputEvent('input', { bubbles: true, cancelable: true, data: text, inputType: 'insertText' });
+        ta.dispatchEvent(inputEvent);
+        ta.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+        // Додаткові клавіатурні події для React‑візуальності
+        ta.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        ta.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
         ta.focus();
+        // Додаємо blur‑focus, щоб змусити React оновитися
+        ta.dispatchEvent(new Event('blur'));
+        ta.focus();
+        // Встановлюємо курсор в кінець тексту
+        if (typeof ta.setSelectionRange === 'function') {
+            ta.setSelectionRange(text.length, text.length);
+        }
+        // Невелика пауза, щоб React встиг оновити стан
+        await new Promise(r => setTimeout(r, 300));
+        // Перезапускаємо input на випадок, якщо попередній не спрацював
+        try { ta.dispatchEvent(new Event('input', { bubbles: true, cancelable: true })); } catch (_) {}
         log('Текст успішно вставлено у textarea та події відправлені');
         return true;
     }
-
-    // =========================================================================
-    // Надіслати коментар через SDK
-    // Спочатку завантажуємо деталі UR (getUpdateRequestDetails) —
-    // це примусово завантажує сесію, без якої addComment кидає
-    // DataModelNotFoundError.
-    // =========================================================================
-    async function sendComment(urId, text) {
-        // Примусово завантажуємо сесію
         try {
             await sdk.DataModel.MapUpdateRequests.getUpdateRequestDetails({
                 mapUpdateRequestId: urId,
