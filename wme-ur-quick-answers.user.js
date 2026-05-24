@@ -211,7 +211,7 @@
             return false;
         }
 
-        // Намагаємось через React nativeInputValueSetter
+        // Спробуємо встановити значення так, щоб React/Angular/модуль UI побачив зміну
         const nativeSetter = Object.getOwnPropertyDescriptor(
             window.HTMLTextAreaElement.prototype, 'value'
         )?.set;
@@ -219,14 +219,15 @@
         if (nativeSetter) {
             nativeSetter.call(ta, text);
         } else {
+            // fallback, якщо native setter недоступний
             ta.value = text;
         }
 
-        // Тригеримо input + change — React/Angular підхоплять
-        ta.dispatchEvent(new Event('input',  { bubbles: true }));
+        // Тригеримо події, які очікує фреймворк (input + change) та фокусуємо поле
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
         ta.dispatchEvent(new Event('change', { bubbles: true }));
         ta.focus();
-        log('Текст вставлено в поле коментаря');
+        log('Текст успішно вставлено у textarea та події відправлені');
         return true;
     }
 
