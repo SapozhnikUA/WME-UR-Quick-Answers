@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME UR Quick Answers
 // @namespace    https://github.com/SapozhnikUA/WME-UR-Quick-Answers
-// @version      1.8
+// @version      1.9
 // @description  Швидкі відповіді на UR — кнопки ✓ ✗ ? у панелі звіту
 // @homepageURL  https://github.com/SapozhnikUA/WME-UR-Quick-Answers
 // @downloadURL  https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Quick-Answers/main/wme-ur-quick-answers.user.js
@@ -206,6 +206,7 @@
         }
         // 5️⃣ Якщо нічого не знайдено – null
         return null;
+    }
 
     // =========================================================================
     // Вставити текст у textarea в DOM
