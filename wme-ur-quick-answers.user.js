@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME UR Quick Answers
 // @namespace    https://github.com/SapozhnikUA
-// @version      1.1
+// @version      1.2
 // @description  Швидкі відповіді на UR — кнопки ✓ ✗ ? у панелі звіту
 // @author       SapozhnikUA
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -19,10 +19,9 @@
     let sdk = null;
 
     // =========================================================================
-    // Локалізація
+    // Локалізація — визначаємо мову за URL редактора
+    // /uk/ /ru/ → українська | /ro/ /md/ → румунська | решта → англійська
     // =========================================================================
-
-    // Визначаємо мову за URL редактора: /uk/ /ru/ → ua; /ro/ /md/ → ro; решта → en
     function detectLang() {
         const m = location.pathname.match(/^\/([a-z]{2})\//);
         const code = m ? m[1] : 'en';
@@ -56,13 +55,14 @@
             sectionAsk:    '? Запит інформації',
             savedOk:       'Налаштування збережено',
             noUrId:        'Не вдалося визначити ID UR',
-            noTextarea:    'textarea не знайдено — текст скопійовано в буфер',
-            textInserted:  'Текст вставлено в поле коментаря',
+            noSession:     'Сесія UR не завантажена, коментар пропущено',
+            commentSent:   'Коментар надіслано',
+            closedAs:      'Закрито як',
             panelAdded:    'Кнопки додано до панелі UR',
             observerOn:    'MutationObserver запущено',
-            defaultYes:    `Дякуємо за допомогу!\nПроблему вирішено. Оновлення мапи за декілька днів.\nПриєднуйтесь до наших спільнот у соціальних мережах.\nУсі посилання можна знайти на сторінці http://waze.com.ua`,
-            defaultNo:     `На жаль, ми не отримали достатньо інформації для виправлення помилки.\nУ випадку виникнення помилки повторно, або якщо у Вас є зауваження, надішліть, будь ласка, новий звіт.\nПриєднуйтесь до наших спільнот у соціальних мережах.\nУсі посилання можна знайти на сторінці http://waze.com.ua`,
-            defaultAsk:    `Дякуємо за пильність.\nБудьте ласкаві, надайте більш детальну інформацію про помилку.\nПомилка без коментарів буде закрита як нез'ясована.`,
+            defaultYes:    'Дякуємо за допомогу!\nПроблему вирішено. Оновлення мапи за декілька днів.\nПриєднуйтесь до наших спільнот у соціальних мережах.\nУсі посилання можна знайти на сторінці http://waze.com.ua',
+            defaultNo:     'На жаль, ми не отримали достатньо інформації для виправлення помилки.\nУ випадку виникнення помилки повторно, або якщо у Вас є зауваження, надішліть, будь ласка, новий звіт.\nПриєднуйтесь до наших спільнот у соціальних мережах.\nУсі посилання можна знайти на сторінці http://waze.com.ua',
+            defaultAsk:    "Дякуємо за пильність.\nБудьте ласкаві, надайте більш детальну інформацію про помилку.\nПомилка без коментарів буде закрита як нез'ясована.",
         },
         ro: {
             btnYesTitle:   'Rezolvat',
@@ -86,13 +86,14 @@
             sectionAsk:    '? Solicitare informații',
             savedOk:       'Setări salvate',
             noUrId:        'Nu s-a putut determina ID-ul UR',
-            noTextarea:    'textarea negăsit — text copiat în clipboard',
-            textInserted:  'Text inserat în câmpul de comentariu',
+            noSession:     'Sesiunea UR nu este încărcată, comentariu omis',
+            commentSent:   'Comentariu trimis',
+            closedAs:      'Închis ca',
             panelAdded:    'Butoane adăugate la panoul UR',
             observerOn:    'MutationObserver pornit',
-            defaultYes:    `Vă mulțumim pentru ajutor!\nProblema a fost rezolvată. Actualizările hărții vor apărea în câteva zile.\nAlăturați-vă comunităților noastre din rețelele sociale.\nToate linkurile le găsiți pe pagina http://waze.com.ua`,
-            defaultNo:     `Din păcate, nu am primit suficiente informații pentru a remedia eroarea.\nDacă problema reapare sau aveți observații, vă rugăm să trimiteți un nou raport.\nAlăturați-vă comunităților noastre din rețelele sociale.\nToate linkurile le găsiți pe pagina http://waze.com.ua`,
-            defaultAsk:    `Vă mulțumim pentru vigilență.\nVă rugăm să furnizați informații mai detaliate despre eroare.\nErorile fără comentarii vor fi închise ca neidentificate.`,
+            defaultYes:    'Vă mulțumim pentru ajutor!\nProblema a fost rezolvată. Actualizările hărții vor apărea în câteva zile.\nAlăturați-vă comunităților noastre din rețelele sociale.\nToate linkurile le găsiți pe pagina http://waze.com.ua',
+            defaultNo:     'Din păcate, nu am primit suficiente informații pentru a remedia eroarea.\nDacă problema reapare sau aveți observații, vă rugăm să trimiteți un nou raport.\nAlăturați-vă comunităților noastre din rețelele sociale.\nToate linkurile le găsiți pe pagina http://waze.com.ua',
+            defaultAsk:    'Vă mulțumim pentru vigilență.\nVă rugăm să furnizați informații mai detaliate despre eroare.\nErorile fără comentarii vor fi închise ca neidentificate.',
         },
         en: {
             btnYesTitle:   'Resolved',
@@ -116,26 +117,27 @@
             sectionAsk:    '? Request information',
             savedOk:       'Settings saved',
             noUrId:        'Could not determine UR ID',
-            noTextarea:    'textarea not found — text copied to clipboard',
-            textInserted:  'Text inserted into comment field',
+            noSession:     'UR session not loaded, comment skipped',
+            commentSent:   'Comment sent',
+            closedAs:      'Closed as',
             panelAdded:    'Buttons added to UR panel',
             observerOn:    'MutationObserver started',
-            defaultYes:    `Thank you for your help!\nThe issue has been resolved. Map updates will appear within a few days.\nJoin our communities on social media.\nAll links can be found at http://waze.com.ua`,
-            defaultNo:     `Unfortunately, we did not receive enough information to fix the error.\nIf the issue recurs or you have any comments, please submit a new report.\nJoin our communities on social media.\nAll links can be found at http://waze.com.ua`,
-            defaultAsk:    `Thank you for your attention.\nPlease provide more detailed information about the error.\nReports without comments will be closed as not identified.`,
+            defaultYes:    'Thank you for your help!\nThe issue has been resolved. Map updates will appear within a few days.\nJoin our communities on social media.\nAll links can be found at http://waze.com.ua',
+            defaultNo:     'Unfortunately, we did not receive enough information to fix the error.\nIf the issue recurs or you have any comments, please submit a new report.\nJoin our communities on social media.\nAll links can be found at http://waze.com.ua',
+            defaultAsk:    'Thank you for your attention.\nPlease provide more detailed information about the error.\nReports without comments will be closed as not identified.',
         },
     };
 
     const T = I18N[LANG];
 
     // =========================================================================
-    // Дефолтні налаштування (тексти беруться з локалізації)
+    // Дефолтні налаштування
     // =========================================================================
     function getDefaults() {
         return {
-            yes: { text: T.defaultYes, sendComment: true,  closeReport: true,  closeAs: 'solved'         },
-            no:  { text: T.defaultNo,  sendComment: true,  closeReport: true,  closeAs: 'not-identified'  },
-            ask: { text: T.defaultAsk, sendComment: false, closeReport: false, closeAs: 'open'            },
+            yes: { text: T.defaultYes, sendComment: true,  closeReport: true,  closeAs: 'solved'        },
+            no:  { text: T.defaultNo,  sendComment: true,  closeReport: true,  closeAs: 'not-identified' },
+            ask: { text: T.defaultAsk, sendComment: false, closeReport: false, closeAs: 'open'           },
         };
     }
 
@@ -143,7 +145,7 @@
     // Утиліти
     // =========================================================================
     function log(msg)       { console.log(`[${SCRIPT_NAME}] ${msg}`); }
-    function logErr(msg, e) { console.error(`[${SCRIPT_NAME}] ✖ ${msg}`, e || ''); }
+    function logErr(msg, e) { console.error(`[${SCRIPT_NAME}] ✖ ${msg}`, e); }
 
     function loadSettings() {
         try {
@@ -153,16 +155,10 @@
         } catch { return getDefaults(); }
     }
 
-    function saveSettings(s) {
-        localStorage.setItem(LS_KEY, JSON.stringify(s));
-    }
+    function saveSettings(s) { localStorage.setItem(LS_KEY, JSON.stringify(s)); }
 
     function escHtml(s) {
-        return s
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
     // =========================================================================
@@ -172,59 +168,98 @@
         // Спроба 1: data-id на картці
         const card = document.querySelector('.overlay-container wz-card.mapUpdateRequest');
         if (card) {
-            const idAttr = card.getAttribute('data-id') || card.getAttribute('id') || '';
-            const m = idAttr.match(/\d+/);
+            const raw = card.getAttribute('data-id') || card.getAttribute('id') || '';
+            const m = raw.match(/\d+/);
             if (m) return Number(m[0]);
         }
-
-        // Спроба 2: URL параметр ?urs=123
+        // Спроба 2: URL-параметр ?urs=123
         const urlMatch = location.search.match(/[?&]urs=(\d+)/);
         if (urlMatch) return Number(urlMatch[1]);
-
-        // Спроба 3: SDK — перший відкритий та редагований
-        if (sdk) {
-            try {
-                const all = sdk.DataModel.MapUpdateRequests.getAll();
-                const candidate = all.find(u => u.isOpen && u.isEditable);
-                if (candidate) return candidate.id;
-            } catch (e) {
-                logErr('getAll', e);
-            }
-        }
-
+        // Спроба 3: перший відкритий та редагований через SDK
+        try {
+            const all = sdk.DataModel.MapUpdateRequests.getAll();
+            const candidate = all.find(u => u.isOpen && u.isEditable);
+            if (candidate) return candidate.id;
+        } catch (_) { /* ігноруємо */ }
         return null;
     }
 
     // =========================================================================
-    // Вставити текст у textarea коментаря
+    // Вставити текст у textarea в DOM
+    // Використовуємо React nativeSetter щоб фреймворк "побачив" зміну
     // =========================================================================
     function insertCommentText(text) {
         const ta = document.querySelector(
-            '.overlay-container wz-card.mapUpdateRequest textarea, ' +
+            '.overlay-container wz-card.mapUpdateRequest textarea,' +
             '.overlay-container wz-card.mapUpdateRequest wz-textarea textarea'
         );
-        if (ta) {
-            ta.value = text;
-            ta.dispatchEvent(new Event('input',  { bubbles: true }));
-            ta.dispatchEvent(new Event('change', { bubbles: true }));
-            ta.focus();
-            log(T.textInserted);
-        } else {
+        if (!ta) {
+            // Textarea не знайдено — скопіювати в буфер як запасний варіант
             navigator.clipboard?.writeText(text).catch(() => {});
-            log(T.noTextarea);
+            log('textarea не знайдено — текст скопійовано в буфер');
+            return false;
+        }
+
+        // Намагаємось через React nativeInputValueSetter
+        const nativeSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLTextAreaElement.prototype, 'value'
+        )?.set;
+
+        if (nativeSetter) {
+            nativeSetter.call(ta, text);
+        } else {
+            ta.value = text;
+        }
+
+        // Тригеримо input + change — React/Angular підхоплять
+        ta.dispatchEvent(new Event('input',  { bubbles: true }));
+        ta.dispatchEvent(new Event('change', { bubbles: true }));
+        ta.focus();
+        log('Текст вставлено в поле коментаря');
+        return true;
+    }
+
+    // =========================================================================
+    // Надіслати коментар через SDK
+    // Спочатку завантажуємо деталі UR (getUpdateRequestDetails) —
+    // це примусово завантажує сесію, без якої addComment кидає
+    // DataModelNotFoundError.
+    // =========================================================================
+    async function sendComment(urId, text) {
+        // Примусово завантажуємо сесію
+        try {
+            await sdk.DataModel.MapUpdateRequests.getUpdateRequestDetails({
+                mapUpdateRequestId: urId,
+            });
+        } catch (e) {
+            log(`${T.noSession}: ${e?.message}`);
+            return false;
+        }
+
+        try {
+            await sdk.DataModel.MapUpdateRequests.addComment({
+                mapUpdateRequestId: urId,
+                text,
+            });
+            log(`${T.commentSent} #${urId}`);
+            return true;
+        } catch (e) {
+            // DataModelNotFoundError — сесія все одно не завантажилась,
+            // не блокуємо закриття UR
+            log(`${T.noSession}: ${e?.message}`);
+            return false;
         }
     }
 
     // =========================================================================
-    // Виконати дію по кнопці
+    // Головна функція дії
     // =========================================================================
     async function performAction(actionKey) {
-        const settings = loadSettings();
-        const cfg = settings[actionKey];
+        const cfg = loadSettings()[actionKey];
         if (!cfg) return;
 
-        // Кнопка «?» в режимі «не надсилати» — тільки вставити текст
-        if (actionKey === 'ask' && !cfg.sendComment) {
+        // Кнопка «?» без надсилання — тільки вставляємо в textarea і виходимо
+        if (!cfg.sendComment && !cfg.closeReport) {
             insertCommentText(cfg.text);
             return;
         }
@@ -234,25 +269,19 @@
 
         log(`Дія "${actionKey}" для UR #${urId}`);
 
+        // Надіслати коментар (з примусовим завантаженням сесії)
         if (cfg.sendComment && cfg.text.trim()) {
-            try {
-                await sdk.DataModel.MapUpdateRequests.addComment({
-                    mapUpdateRequestId: urId,
-                    text: cfg.text,
-                });
-                log(`Коментар надіслано для #${urId}`);
-            } catch (e) {
-                logErr(`addComment #${urId}`, e);
-            }
+            await sendComment(urId, cfg.text);
         }
 
+        // Закрити звіт
         if (cfg.closeReport) {
             try {
                 sdk.DataModel.MapUpdateRequests.updateResolutionState({
                     mapUpdateRequestId: urId,
                     resolutionState: cfg.closeAs,
                 });
-                log(`UR #${urId} закрито як "${cfg.closeAs}"`);
+                log(`${T.closedAs} "${cfg.closeAs}" #${urId}`);
             } catch (e) {
                 logErr(`updateResolutionState #${urId}`, e);
             }
@@ -270,14 +299,7 @@
 
         const bar = document.createElement('div');
         bar.id = 'qa-btn-bar';
-        bar.style.cssText = [
-            'position:absolute',
-            'top:8px',
-            'right:8px',
-            'display:flex',
-            'gap:4px',
-            'z-index:9999',
-        ].join(';');
+        bar.style.cssText = 'position:absolute;top:8px;right:8px;display:flex;gap:4px;z-index:9999;';
 
         const BTNS = [
             { key: 'yes',  icon: '✓', title: T.btnYesTitle, color: '#27ae60' },
@@ -291,73 +313,36 @@
             btn.textContent = icon;
             btn.title = title;
             btn.style.cssText = [
-                'width:26px',
-                'height:26px',
-                'border:none',
-                'border-radius:50%',
-                `background:${color}`,
-                'color:#fff',
-                'font-size:14px',
-                'font-weight:bold',
-                'cursor:pointer',
-                'display:flex',
-                'align-items:center',
-                'justify-content:center',
-                'padding:0',
-                'line-height:1',
-                'box-shadow:0 1px 3px rgba(0,0,0,.35)',
+                'width:26px','height:26px','border:none','border-radius:50%',
+                `background:${color}`,'color:#fff','font-size:14px','font-weight:bold',
+                'cursor:pointer','display:flex','align-items:center','justify-content:center',
+                'padding:0','line-height:1','box-shadow:0 1px 3px rgba(0,0,0,.35)',
                 'transition:opacity .15s',
             ].join(';');
             btn.onmouseenter = () => { btn.style.opacity = '0.75'; };
             btn.onmouseleave = () => { btn.style.opacity = '1'; };
-
-            if (key === '_cfg') {
-                btn.addEventListener('click', openSettings);
-            } else {
-                btn.addEventListener('click', () => performAction(key));
-            }
+            btn.addEventListener('click', key === '_cfg' ? openSettings : () => performAction(key));
             bar.appendChild(btn);
         });
 
-        if (getComputedStyle(card).position === 'static') {
-            card.style.position = 'relative';
-        }
+        if (getComputedStyle(card).position === 'static') card.style.position = 'relative';
         card.appendChild(bar);
         log(T.panelAdded);
     }
 
     // =========================================================================
-    // Налаштування — модальне вікно
+    // Модальне вікно налаштувань
     // =========================================================================
     function openSettings() {
         if (document.getElementById('qa-settings-modal')) return;
-
         const settings = loadSettings();
 
         const overlay = document.createElement('div');
         overlay.id = 'qa-settings-modal';
-        overlay.style.cssText = [
-            'position:fixed',
-            'inset:0',
-            'background:rgba(0,0,0,.5)',
-            'z-index:99999',
-            'display:flex',
-            'align-items:center',
-            'justify-content:center',
-        ].join(';');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = [
-            'background:#fff',
-            'border-radius:8px',
-            'padding:20px',
-            'width:540px',
-            'max-height:85vh',
-            'overflow-y:auto',
-            'font-family:sans-serif',
-            'font-size:13px',
-            'box-shadow:0 8px 32px rgba(0,0,0,.3)',
-        ].join(';');
+        modal.style.cssText = 'background:#fff;border-radius:8px;padding:20px;width:540px;max-height:85vh;overflow-y:auto;font-family:sans-serif;font-size:13px;box-shadow:0 8px 32px rgba(0,0,0,.3);';
 
         const SECTIONS = [
             { key: 'yes', label: T.sectionYes, color: '#27ae60' },
@@ -369,9 +354,6 @@
 
         SECTIONS.forEach(({ key, label, color }) => {
             const cfg = settings[key];
-            const selSolved = cfg.closeAs === 'solved'         ? 'selected' : '';
-            const selNotId  = cfg.closeAs === 'not-identified' ? 'selected' : '';
-            const selOpen   = cfg.closeAs === 'open'           ? 'selected' : '';
             html += `
             <div style="border-left:4px solid ${color};padding:8px 12px;margin-bottom:14px;background:#fafafa;border-radius:0 6px 6px 0;">
                 <div style="font-weight:bold;color:${color};margin-bottom:8px;">${label}</div>
@@ -382,20 +364,17 @@
                 <div style="display:flex;gap:14px;margin-top:8px;align-items:center;flex-wrap:wrap;">
                     <label style="display:flex;align-items:center;gap:4px;">
                         <input type="checkbox" id="qa-send-${key}" ${cfg.sendComment ? 'checked' : ''}>
-                        ${T.labelSend}
-                    </label>
+                        ${T.labelSend}</label>
                     <label style="display:flex;align-items:center;gap:4px;">
                         <input type="checkbox" id="qa-close-${key}" ${cfg.closeReport ? 'checked' : ''}>
-                        ${T.labelClose}
-                    </label>
+                        ${T.labelClose}</label>
                     <label style="display:flex;align-items:center;gap:4px;margin-left:auto;">
                         ${T.labelStatus}
                         <select id="qa-state-${key}" style="padding:2px 4px;border-radius:3px;border:1px solid #ccc;">
-                            <option value="solved"         ${selSolved}>${T.statusSolved}</option>
-                            <option value="not-identified" ${selNotId}>${T.statusNotId}</option>
-                            <option value="open"           ${selOpen}>${T.statusOpen}</option>
-                        </select>
-                    </label>
+                            <option value="solved"         ${cfg.closeAs==='solved'         ? 'selected':''} >${T.statusSolved}</option>
+                            <option value="not-identified" ${cfg.closeAs==='not-identified' ? 'selected':''} >${T.statusNotId}</option>
+                            <option value="open"           ${cfg.closeAs==='open'           ? 'selected':''} >${T.statusOpen}</option>
+                        </select></label>
                 </div>
             </div>`;
         });
@@ -412,27 +391,24 @@
         document.body.appendChild(overlay);
 
         overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-
         document.getElementById('qa-cancel').addEventListener('click', () => overlay.remove());
-
         document.getElementById('qa-reset').addEventListener('click', () => {
             if (!confirm(T.confirmReset)) return;
             saveSettings(getDefaults());
             overlay.remove();
             openSettings();
         });
-
         document.getElementById('qa-save').addEventListener('click', () => {
-            const newSettings = {};
+            const s = {};
             SECTIONS.forEach(({ key }) => {
-                newSettings[key] = {
+                s[key] = {
                     text:        document.getElementById(`qa-text-${key}`).value,
                     sendComment: document.getElementById(`qa-send-${key}`).checked,
                     closeReport: document.getElementById(`qa-close-${key}`).checked,
                     closeAs:     document.getElementById(`qa-state-${key}`).value,
                 };
             });
-            saveSettings(newSettings);
+            saveSettings(s);
             log(T.savedOk);
             overlay.remove();
         });
@@ -456,16 +432,10 @@
     // Ініціалізація
     // =========================================================================
     function init() {
-        if (typeof window.getWmeSdk !== 'function') {
-            logErr('getWmeSdk недоступний');
-            return;
-        }
+        if (typeof window.getWmeSdk !== 'function') { logErr('getWmeSdk недоступний'); return; }
         try {
             sdk = window.getWmeSdk({ scriptId: SCRIPT_ID, scriptName: SCRIPT_NAME });
-        } catch (e) {
-            logErr('getWmeSdk:', e);
-            return;
-        }
+        } catch (e) { logErr('getWmeSdk', e); return; }
 
         sdk.Events.once({ eventName: 'wme-ready' }).then(() => {
             log(`Готово [${LANG}]`);
@@ -473,13 +443,11 @@
         });
     }
 
-    // =========================================================================
     // Bootstrap — точно як у Auto-Closer
-    // =========================================================================
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            window.SDK_INITIALIZED.then(init).catch(e => logErr('SDK_INITIALIZED', e));
-        });
+        document.addEventListener('DOMContentLoaded', () =>
+            window.SDK_INITIALIZED.then(init).catch(e => logErr('SDK_INITIALIZED', e))
+        );
     } else {
         window.SDK_INITIALIZED.then(init).catch(e => logErr('SDK_INITIALIZED', e));
     }
