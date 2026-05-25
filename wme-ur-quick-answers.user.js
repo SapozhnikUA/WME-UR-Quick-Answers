@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME UR Quick Answers
 // @namespace    https://github.com/SapozhnikUA/WME-UR-Quick-Answers
-// @version      1.10
+// @version      1.12
 // @description  Швидкі відповіді на UR — кнопки ✓ ✗ ? у панелі звіту
 // @homepageURL  https://github.com/SapozhnikUA/WME-UR-Quick-Answers
 // @downloadURL  https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Quick-Answers/main/wme-ur-quick-answers.user.js
@@ -169,106 +169,45 @@
 
     // =========================================================================
     // Отримати ID відкритого UR
+    // Читаємо з React internal props картки wz-card.problem-edit.
+    // Шлях: __reactProps$* → children[0].props.model.adapter.attributes.attributes.id
+    // Це єдиний надійний спосіб: data-id="null", URL статичний, SDK не має selected.
     // =========================================================================
     function getOpenUrId() {
-        // 1️⃣ Перший пріоритет – знайти видиму (відкриту) картку UR у DOM (надійніше, бо саме вона активна)
-        const cards = document.querySelectorAll('.overlay-container wz-card.mapUpdateRequest');
-        for (const card of cards) {
-            if (card.offsetParent !== null) { // видима
-                const raw = card.getAttribute('data-id') || card.id || '';
-                const m = raw.match(/\d+/);
-                if (m) return Number(m[0]);
-            }
-        }
-        // 2️⃣ Якщо DOM не дав результату, спробувати SDK (може містити відкриті, які ще не відображені)
-        if (sdk && sdk.DataModel) {
-            try {
-                const all = sdk.DataModel.MapUpdateRequests.getAll();
-                // Шукаємо запит, який маркований як open і editable
-                const candidate = all.find(u => (u.isOpen || u.state === 'open') && (u.isEditable || u.editable));
-                if (candidate && candidate.id) {
-                    return Number(candidate.id);
-                }
-            } catch (_) { /* ignore SDK errors */ }
-        }
-        // 3️⃣ Запасний варіант – ID з URL
-        const urlMatch = location.search.match(/[?&]urs=(\d+)/);
-        if (urlMatch) return Number(urlMatch[1]);
-        // 4️⃣ Пошук в textarea або її батьківській картці (як остання інша спроба)
-        const textarea = document.querySelector('.overlay-container wz-card.mapUpdateRequest textarea, .overlay-container wz-card.mapUpdateRequest [contenteditable="true"]');
-        if (textarea) {
-            const card = textarea.closest('.mapUpdateRequest');
-            if (card) {
-                const raw = card.getAttribute('data-id') || card.id || '';
-                const m = raw.match(/\d+/);
-                if (m) return Number(m[0]);
-            }
-        }
-        // 5️⃣ Якщо нічого не знайдено – null
-        return null;
+        const card = document.querySelector('wz-card.problem-edit');
+        if (!card) { log('⚠ getOpenUrId: wz-card.problem-edit не знайдено'); return null; }
+        const propsKey = Object.getOwnPropertyNames(card).find(k => k.startsWith('__reactProps$'));
+        if (!propsKey) { log('⚠ getOpenUrId: __reactProps$ не знайдено'); return null; }
+        const adapter = card[propsKey]?.children?.[0]?.props?.model?.adapter;
+        const id = adapter?.attributes?.attributes?.id;
+        if (!id) { log('⚠ getOpenUrId: id не знайдено в React props'); return null; }
+        return Number(id);
     }
 
     // =========================================================================
     // Вставити текст у textarea в DOM
     // Використовуємо React nativeSetter щоб фреймворк "побачив" зміну
     // =========================================================================
-async function insertCommentText(text) {
-        // Додаткові кроки для поліпшення сумісності з різними UI‑фреймворками та різними шаблонами textarea
-        // Пошук textarea або елементу з contenteditable
-        let ta = document.querySelector(
-            '.overlay-container wz-card.mapUpdateRequest textarea,' +
-            '.overlay-container wz-card.mapUpdateRequest wz-textarea textarea,' +
-            '.overlay-container wz-card.mapUpdateRequest [contenteditable="true"]'
-        );
+    // =========================================================================
+    // Вставити текст у textarea вікна деталей UR
+    // =========================================================================
+    async function insertCommentText(text) {
+        const scope = document.querySelector('wz-card.problem-edit') || document;
+        const ta = scope.querySelector('textarea, wz-textarea textarea');
         if (!ta) {
-            // Textarea не знайдено – копіюємо в буфер як запасний варіант
-            try {
-                await navigator.clipboard.writeText(text);
-                log(`${T.clipboardFallback || 'Textarea не знайдено — текст скопійовано в буфер обміну'}`);
-            } catch (e) {
-                logErr('Clipboard copy failed', e);
-            }
+            try { await navigator.clipboard.writeText(text); } catch (_) {}
+            log(T.clipboardFallback);
             return false;
         }
-        // Якщо це contenteditable, використаємо execCommand для вставки
-        if (ta.isContentEditable) {
-            ta.focus();
-            if (document.execCommand && document.execCommand('insertText', false, text)) {
-                log('Текст успішно вставлено у contenteditable');
-                return true;
-            }
-        }
-        // Спробуємо встановити значення так, щоб React/Angular/модуль UI побачив зміну
         const nativeSetter = Object.getOwnPropertyDescriptor(
             window.HTMLTextAreaElement.prototype, 'value'
         )?.set;
-        if (nativeSetter) {
-            nativeSetter.call(ta, text);
-        }
-        // Додаткова гарантія – явно присвоюємо value і атрибут
-        ta.value = text;
-        ta.setAttribute('value', text);
-        // Виділяємо весь текст – іноді UI оновлює лише при виділенні
-        if (typeof ta.select === 'function') ta.select();
-        // Тригеримо події, які очікує UI (input, change, keydown, keyup) і фокусуємо поле
-        const inputEvent = new InputEvent('input', { bubbles: true, cancelable: true, data: text, inputType: 'insertText' });
-        ta.dispatchEvent(inputEvent);
-        ta.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-        ta.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-        ta.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+        if (nativeSetter) { nativeSetter.call(ta, text); } else { ta.value = text; }
+        ta.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: text, inputType: 'insertText' }));
+        ta.dispatchEvent(new Event('change', { bubbles: true }));
         ta.focus();
-        // Додаємо blur‑focus, щоб змусити React оновитися
-        ta.dispatchEvent(new Event('blur'));
-        ta.focus();
-        // Встановлюємо курсор в кінець тексту
-        if (typeof ta.setSelectionRange === 'function') {
-            ta.setSelectionRange(text.length, text.length);
-        }
-        // Невелика пауза, щоб React встиг оновити стан
-        await new Promise(r => setTimeout(r, 300));
-        // Перезапускаємо input на випадок, якщо попередній не спрацював
-        try { ta.dispatchEvent(new Event('input', { bubbles: true, cancelable: true })); } catch (_) {}
-        log('Текст успішно вставлено у textarea та події відправлені');
+        if (typeof ta.setSelectionRange === 'function') ta.setSelectionRange(text.length, text.length);
+        log('Текст успішно вставлено у textarea');
         return true;
     }
 
@@ -332,23 +271,26 @@ async function sendComment(urId, text) {
     }
 
     // =========================================================================
-    // Ін'єкція кнопок у панель UR
+    // Ін'єкція кнопок у вікно деталей UR (wz-card.problem-edit)
     // =========================================================================
-    function injectButtons() {
-        if (document.getElementById('qa-btn-bar')) return;
+    function injectButtons(card) {
+        if (card.querySelector('#qa-btn-bar')) return;
 
-        const card = document.querySelector('.overlay-container wz-card.mapUpdateRequest');
-        if (!card) return;
+        const oldBar = document.getElementById('qa-btn-bar');
+        if (oldBar) oldBar.remove();
+
+        const urId = getOpenUrId();
+        log(`injectButtons: картка знайдена, UR ID = ${urId}`);
 
         const bar = document.createElement('div');
         bar.id = 'qa-btn-bar';
         bar.style.cssText = 'position:absolute;top:8px;right:8px;display:flex;gap:4px;z-index:9999;';
 
         const BTNS = [
-            { key: 'yes',  icon: '✓', title: T.btnYesTitle, color: '#27ae60' },
-            { key: 'no',   icon: '✗', title: T.btnNoTitle,  color: '#e74c3c' },
-            { key: 'ask',  icon: '?', title: T.btnAskTitle, color: '#f39c12' },
-            { key: '_cfg', icon: '⚙', title: T.btnCfgTitle, color: '#7f8c8d' },
+            { key: 'yes',  icon: '\u2713', title: T.btnYesTitle, color: '#27ae60' },
+            { key: 'no',   icon: '\u2717', title: T.btnNoTitle,  color: '#e74c3c' },
+            { key: 'ask',  icon: '?',       title: T.btnAskTitle, color: '#f39c12' },
+            { key: '_cfg', icon: '\u2699', title: T.btnCfgTitle, color: '#7f8c8d' },
         ];
 
         BTNS.forEach(({ key, icon, title, color }) => {
@@ -458,13 +400,21 @@ async function sendComment(urId, text) {
     }
 
     // =========================================================================
-    // MutationObserver — слідкуємо за появою панелі UR
+    // MutationObserver — слідкуємо за появою/зникненням вікна деталей UR
+    // wz-card.problem-edit — унікальний клас вікна деталей (не списку)
     // =========================================================================
     function watchForUrPanel() {
+        let lastCard = null;
         const observer = new MutationObserver(() => {
-            const card = document.querySelector('.overlay-container wz-card.mapUpdateRequest');
-            if (card && !document.getElementById('qa-btn-bar')) {
-                setTimeout(injectButtons, 250);
+            const card = document.querySelector('wz-card.problem-edit');
+            if (card && card !== lastCard) {
+                lastCard = card;
+                injectButtons(card);
+            }
+            if (!card && lastCard) {
+                lastCard = null;
+                const oldBar = document.getElementById('qa-btn-bar');
+                if (oldBar) oldBar.remove();
             }
         });
         observer.observe(document.body, { childList: true, subtree: true });
