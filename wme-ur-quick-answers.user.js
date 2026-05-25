@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME UR Quick Answers
 // @namespace    https://github.com/SapozhnikUA/WME-UR-Quick-Answers
-// @version      1.12
+// @version      1.14
 // @description  Швидкі відповіді на UR — кнопки ✓ ✗ ? у панелі звіту
 // @homepageURL  https://github.com/SapozhnikUA/WME-UR-Quick-Answers
 // @downloadURL  https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Quick-Answers/main/wme-ur-quick-answers.user.js
@@ -43,8 +43,8 @@
             btnCfgTitle:   'Налаштування',
             settingsTitle: '⚙ Налаштування Quick Answers',
             labelText:     'Текст:',
-            labelSend:     'Надсилати повідомлення',
-            labelClose:    'Закривати звіт',
+            labelSend:     'Повідомлення',
+            labelClose:    'Закрити UR',
             labelStatus:   'Статус:',
             statusSolved:  'Вирішено',
             statusNotId:   "Нез'ясовано",
@@ -75,8 +75,8 @@
             btnCfgTitle:   'Setări',
             settingsTitle: '⚙ Setări Quick Answers',
             labelText:     'Text:',
-            labelSend:     'Trimite mesaj',
-            labelClose:    'Închide raportul',
+            labelSend:     'Mesaj',
+            labelClose:    'Închide UR',
             labelStatus:   'Status:',
             statusSolved:  'Rezolvat',
             statusNotId:   'Neidentificat',
@@ -107,8 +107,8 @@
             btnCfgTitle:   'Settings',
             settingsTitle: '⚙ Quick Answers Settings',
             labelText:     'Text:',
-            labelSend:     'Send message',
-            labelClose:    'Close report',
+            labelSend:     'Message',
+            labelClose:    'Close UR',
             labelStatus:   'Status:',
             statusSolved:  'Resolved',
             statusNotId:   'Not identified',
@@ -134,7 +134,8 @@
         },
     };
 
-    const T = I18N[LANG];
+    // Fallback: якщо ключ відсутній в поточній мові — береться з англійської
+    const T = Object.assign({}, I18N['en'], I18N[LANG]);
 
     // =========================================================================
     // Дефолтні налаштування
@@ -192,21 +193,22 @@
     // Вставити текст у textarea вікна деталей UR
     // =========================================================================
     async function insertCommentText(text) {
-        const scope = document.querySelector('wz-card.problem-edit') || document;
-        const ta = scope.querySelector('textarea, wz-textarea textarea');
+        // Справжня textarea — в shadowRoot wz-textarea (Stencil web component)
+        // textarea в light DOM прихована (display:none) — не використовуємо
+        const card = document.querySelector('wz-card.problem-edit') || document;
+        const wzta = card.querySelector('wz-textarea');
+        const ta = wzta?.shadowRoot?.querySelector('textarea');
         if (!ta) {
             try { await navigator.clipboard.writeText(text); } catch (_) {}
             log(T.clipboardFallback);
             return false;
         }
-        const nativeSetter = Object.getOwnPropertyDescriptor(
-            window.HTMLTextAreaElement.prototype, 'value'
-        )?.set;
-        if (nativeSetter) { nativeSetter.call(ta, text); } else { ta.value = text; }
-        ta.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: text, inputType: 'insertText' }));
-        ta.dispatchEvent(new Event('change', { bubbles: true }));
+        // Stencil слухає native DOM events на своїй textarea
         ta.focus();
-        if (typeof ta.setSelectionRange === 'function') ta.setSelectionRange(text.length, text.length);
+        ta.value = text;
+        ta.dispatchEvent(new Event('input',  { bubbles: true, composed: true }));
+        ta.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+        ta.setSelectionRange(text.length, text.length);
         log('Текст успішно вставлено у textarea');
         return true;
     }
@@ -284,31 +286,44 @@ async function sendComment(urId, text) {
 
         const bar = document.createElement('div');
         bar.id = 'qa-btn-bar';
-        bar.style.cssText = 'position:absolute;top:8px;right:8px;display:flex;gap:4px;z-index:9999;';
+        bar.style.cssText = 'position:absolute;top:8px;left:0;right:0;display:flex;justify-content:space-between;padding:0 8px;z-index:9999;pointer-events:none;';
 
-        const BTNS = [
-            { key: 'yes',  icon: '\u2713', title: T.btnYesTitle, color: '#27ae60' },
-            { key: 'no',   icon: '\u2717', title: T.btnNoTitle,  color: '#e74c3c' },
-            { key: 'ask',  icon: '?',       title: T.btnAskTitle, color: '#f39c12' },
-            { key: '_cfg', icon: '\u2699', title: T.btnCfgTitle, color: '#7f8c8d' },
-        ];
+        const BTN_STYLE = [
+            'width:26px','height:26px','border:none','border-radius:50%',
+            'color:#fff','font-size:14px','font-weight:bold',
+            'cursor:pointer','display:flex','align-items:center','justify-content:center',
+            'padding:0','line-height:1','box-shadow:0 1px 3px rgba(0,0,0,.35)',
+            'transition:opacity .15s','pointer-events:auto',
+        ].join(';');
 
-        BTNS.forEach(({ key, icon, title, color }) => {
+        const makeBtn = (icon, title, color, onClick) => {
             const btn = document.createElement('button');
             btn.textContent = icon;
             btn.title = title;
-            btn.style.cssText = [
-                'width:26px','height:26px','border:none','border-radius:50%',
-                `background:${color}`,'color:#fff','font-size:14px','font-weight:bold',
-                'cursor:pointer','display:flex','align-items:center','justify-content:center',
-                'padding:0','line-height:1','box-shadow:0 1px 3px rgba(0,0,0,.35)',
-                'transition:opacity .15s',
-            ].join(';');
+            btn.style.cssText = BTN_STYLE + `;background:${color}`;
             btn.onmouseenter = () => { btn.style.opacity = '0.75'; };
             btn.onmouseleave = () => { btn.style.opacity = '1'; };
-            btn.addEventListener('click', key === '_cfg' ? openSettings : () => performAction(key));
-            bar.appendChild(btn);
+            btn.addEventListener('click', onClick);
+            return btn;
+        };
+
+        // Ліворуч — шестерьонка
+        const leftGroup = document.createElement('div');
+        leftGroup.style.cssText = 'display:flex;gap:4px;pointer-events:auto;';
+        leftGroup.appendChild(makeBtn('\u2699', T.btnCfgTitle, '#7f8c8d', openSettings));
+        bar.appendChild(leftGroup);
+
+        // Праворуч — ✓ ✗ ?
+        const rightGroup = document.createElement('div');
+        rightGroup.style.cssText = 'display:flex;gap:4px;pointer-events:auto;';
+        [
+            { key: 'yes', icon: '\u2713', title: T.btnYesTitle, color: '#27ae60' },
+            { key: 'no',  icon: '\u2717', title: T.btnNoTitle,  color: '#e74c3c' },
+            { key: 'ask', icon: '?',       title: T.btnAskTitle, color: '#f39c12' },
+        ].forEach(({ key, icon, title, color }) => {
+            rightGroup.appendChild(makeBtn(icon, title, color, () => performAction(key)));
         });
+        bar.appendChild(rightGroup);
 
         if (getComputedStyle(card).position === 'static') card.style.position = 'relative';
         card.appendChild(bar);
@@ -335,7 +350,11 @@ async function sendComment(urId, text) {
             { key: 'ask', label: T.sectionAsk,  color: '#f39c12' },
         ];
 
-        let html = `<h3 style="margin:0 0 16px;font-size:15px;">${T.settingsTitle}</h3>`;
+        let html = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 style="margin:0;font-size:15px;">${T.settingsTitle}</h3>
+                <button id="qa-close-modal" style="background:none;border:none;font-size:18px;cursor:pointer;color:#666;line-height:1;padding:0 2px;">&times;</button>
+            </div>`;
 
         SECTIONS.forEach(({ key, label, color }) => {
             const cfg = settings[key];
@@ -343,7 +362,7 @@ async function sendComment(urId, text) {
             <div style="border-left:4px solid ${color};padding:8px 12px;margin-bottom:14px;background:#fafafa;border-radius:0 6px 6px 0;">
                 <div style="font-weight:bold;color:${color};margin-bottom:8px;">${label}</div>
                 <label style="display:block;margin-bottom:4px;">${T.labelText}</label>
-                <textarea id="qa-text-${key}" rows="4"
+                <textarea id="qa-text-${key}" rows="2"
                     style="width:100%;box-sizing:border-box;font-size:12px;padding:6px;border:1px solid #ccc;border-radius:4px;resize:vertical;"
                 >${escHtml(cfg.text)}</textarea>
                 <div style="display:flex;gap:14px;margin-top:8px;align-items:center;flex-wrap:wrap;">
@@ -376,6 +395,7 @@ async function sendComment(urId, text) {
         document.body.appendChild(overlay);
 
         overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+        document.getElementById('qa-close-modal').addEventListener('click', () => overlay.remove());
         document.getElementById('qa-cancel').addEventListener('click', () => overlay.remove());
         document.getElementById('qa-reset').addEventListener('click', () => {
             if (!confirm(T.confirmReset)) return;
