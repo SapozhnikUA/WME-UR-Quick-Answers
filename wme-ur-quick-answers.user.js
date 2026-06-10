@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME UR Quick Answers
 // @namespace    https://github.com/SapozhnikUA/WME-UR-Quick-Answers
-// @version      1.14
+// @version      1.15
 // @description  Швидкі відповіді на UR — кнопки ✓ ✗ ? у панелі звіту
 // @homepageURL  https://github.com/SapozhnikUA/WME-UR-Quick-Answers
 // @downloadURL  https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Quick-Answers/main/wme-ur-quick-answers.user.js
@@ -15,9 +15,9 @@
 (function () {
     'use strict';
 
-    const SCRIPT_ID   = 'wme-ur-quick-answers';
+    const SCRIPT_ID = 'wme-ur-quick-answers';
     const SCRIPT_NAME = 'UR Quick Answers';
-    const LS_KEY      = 'WMEQuickAnswers_settings';
+    const LS_KEY = 'WMEQuickAnswers_settings';
 
     let sdk = null;
 
@@ -37,100 +37,100 @@
 
     const I18N = {
         uk: {
-            btnYesTitle:   'Вирішено',
-            btnNoTitle:    'Не вирішено',
-            btnAskTitle:   'Запит інформації',
-            btnCfgTitle:   'Налаштування',
+            btnYesTitle: 'Вирішено',
+            btnNoTitle: 'Не вирішено',
+            btnAskTitle: 'Запит інформації',
+            btnCfgTitle: 'Налаштування',
             settingsTitle: '⚙ Налаштування Quick Answers',
-            labelText:     'Текст:',
-            labelSend:     'Повідомлення',
-            labelClose:    'Закрити UR',
-            labelStatus:   'Статус:',
-            statusSolved:  'Вирішено',
-            statusNotId:   "Нез'ясовано",
-            statusOpen:    'Відкрито',
-            btnReset:      'Скинути до дефолту',
-            btnCancel:     'Скасувати',
-            btnSave:       'Зберегти',
-            confirmReset:  'Скинути всі налаштування до дефолтних значень?',
-            sectionYes:    '✓ Вирішено',
-            sectionNo:     '✗ Не вирішено',
-            sectionAsk:    '? Запит інформації',
-            savedOk:       'Налаштування збережено',
-            noUrId:        'Не вдалося визначити ID UR',
-            noSession:     'Сесія UR не завантажена, коментар пропущено',
-            commentSent:   'Коментар надіслано',
-            closedAs:      'Закрито як',
-            panelAdded:    'Кнопки додано до панелі UR',
-            observerOn:    'MutationObserver запущено',
+            labelText: 'Текст:',
+            labelSend: 'Повідомлення',
+            labelClose: 'Закрити UR',
+            labelStatus: 'Статус:',
+            statusSolved: 'Вирішено',
+            statusNotId: "Нез'ясовано",
+            statusOpen: 'Відкрито',
+            btnReset: 'Скинути до дефолту',
+            btnCancel: 'Скасувати',
+            btnSave: 'Зберегти',
+            confirmReset: 'Скинути всі налаштування до дефолтних значень?',
+            sectionYes: '✓ Вирішено',
+            sectionNo: '✗ Не вирішено',
+            sectionAsk: '? Запит інформації',
+            savedOk: 'Налаштування збережено',
+            noUrId: 'Не вдалося визначити ID UR',
+            noSession: 'Сесія UR не завантажена, коментар пропущено',
+            commentSent: 'Коментар надіслано',
+            closedAs: 'Закрито як',
+            panelAdded: 'Кнопки додано до панелі UR',
+            observerOn: 'MutationObserver запущено',
             clipboardFallback: 'Textarea не знайдено — текст скопійовано в буфер обміну',
-            defaultYes:    'Дякуємо за допомогу!\nПроблему вирішено. Оновлення мапи за декілька днів.\nПриєднуйтесь до наших спільнот у соціальних мережах.\nУсі посилання можна знайти на сторінці http://waze.com.ua',
-            defaultNo:     'На жаль, ми не отримали достатньо інформації для виправлення помилки.\nУ випадку виникнення помилки повторно, або якщо у Вас є зауваження, надішліть, будь ласка, новий звіт.\nПриєднуйтесь до наших спільнот у соціальних мережах.\nУсі посилання можна знайти на сторінці http://waze.com.ua',
-            defaultAsk:    "Дякуємо за пильність.\nБудьте ласкаві, надайте більш детальну інформацію про помилку.\nПомилка без коментарів буде закрита як нез'ясована.",
+            defaultYes: 'Дякуємо за допомогу!\nПроблему вирішено. Оновлення мапи за декілька днів.\nПриєднуйтесь до наших спільнот у соціальних мережах.\nУсі посилання можна знайти на сторінці http://waze.com.ua',
+            defaultNo: 'На жаль, ми не отримали достатньо інформації для виправлення помилки.\nУ випадку виникнення помилки повторно, або якщо у Вас є зауваження, надішліть, будь ласка, новий звіт.\nПриєднуйтесь до наших спільнот у соціальних мережах.\nУсі посилання можна знайти на сторінці http://waze.com.ua',
+            defaultAsk: "Дякуємо за пильність.\nБудьте ласкаві, надайте більш детальну інформацію про помилку.\nПомилка без коментарів буде закрита як нез'ясована.",
         },
         ro: {
-            btnYesTitle:   'Rezolvat',
-            btnNoTitle:    'Nerezolvat',
-            btnAskTitle:   'Solicitare informații',
-            btnCfgTitle:   'Setări',
+            btnYesTitle: 'Rezolvat',
+            btnNoTitle: 'Nerezolvat',
+            btnAskTitle: 'Solicitare informații',
+            btnCfgTitle: 'Setări',
             settingsTitle: '⚙ Setări Quick Answers',
-            labelText:     'Text:',
-            labelSend:     'Mesaj',
-            labelClose:    'Închide UR',
-            labelStatus:   'Status:',
-            statusSolved:  'Rezolvat',
-            statusNotId:   'Neidentificat',
-            statusOpen:    'Deschis',
-            btnReset:      'Resetare implicită',
-            btnCancel:     'Anulare',
-            btnSave:       'Salvare',
-            confirmReset:  'Resetați toate setările la valorile implicite?',
-            sectionYes:    '✓ Rezolvat',
-            sectionNo:     '✗ Nerezolvat',
-            sectionAsk:    '? Solicitare informații',
-            savedOk:       'Setări salvate',
-            noUrId:        'Nu s-a putut determina ID-ul UR',
-            noSession:     'Sesiunea UR nu este încărcată, comentariu omis',
-            commentSent:   'Comentariu trimis',
-            closedAs:      'Închis ca',
-            panelAdded:    'Butoane adăugate la panoul UR',
-            observerOn:    'MutationObserver pornit',
+            labelText: 'Text:',
+            labelSend: 'Mesaj',
+            labelClose: 'Închide UR',
+            labelStatus: 'Status:',
+            statusSolved: 'Rezolvat',
+            statusNotId: 'Neidentificat',
+            statusOpen: 'Deschis',
+            btnReset: 'Resetare implicită',
+            btnCancel: 'Anulare',
+            btnSave: 'Salvare',
+            confirmReset: 'Resetați toate setările la valorile implicite?',
+            sectionYes: '✓ Rezolvat',
+            sectionNo: '✗ Nerezolvat',
+            sectionAsk: '? Solicitare informații',
+            savedOk: 'Setări salvate',
+            noUrId: 'Nu s-a putut determina ID-ul UR',
+            noSession: 'Sesiunea UR nu este încărcată, comentariu omis',
+            commentSent: 'Comentariu trimis',
+            closedAs: 'Închis ca',
+            panelAdded: 'Butoane adăugate la panoul UR',
+            observerOn: 'MutationObserver pornit',
             clipboardFallback: 'Textarea nu a fost găsită — text copiat în clipboard',
-            defaultYes:    'Vă mulțumim pentru ajutor!\nProblema a fost rezolvată. Actualizările hărții vor apărea în câteva zile.\nAlăturați-vă comunităților noastre din rețelele sociale.\nToate linkurile le găsiți pe pagina http://waze.com.ua',
-            defaultNo:     'Din păcate, nu am primit suficiente informații pentru a remedia eroarea.\nDacă problema reapare sau aveți observații, vă rugăm să trimiteți un nou raport.\nAlăturați-vă comunităților noastre din rețelele sociale.\nToate linkurile le găsiți pe pagina http://waze.com.ua',
-            defaultAsk:    'Vă mulțumim pentru vigilență.\nVă rugăm să furnizați informații mai detaliate despre eroare.\nErorile fără comentarii vor fi închise ca neidentificate.',
+            defaultYes: 'Vă mulțumim pentru ajutor!\nProblema a fost rezolvată. Actualizările hărții vor apărea în câteva zile.\nAlăturați-vă comunităților noastre din rețelele sociale.\nToate linkurile le găsiți pe pagina http://waze.com.ua',
+            defaultNo: 'Din păcate, nu am primit suficiente informații pentru a remedia eroarea.\nDacă problema reapare sau aveți observații, vă rugăm să trimiteți un nou raport.\nAlăturați-vă comunităților noastre din rețelele sociale.\nToate linkurile le găsiți pe pagina http://waze.com.ua',
+            defaultAsk: 'Vă mulțumim pentru vigilență.\nVă rugăm să furnizați informații mai detaliate despre eroare.\nErorile fără comentarii vor fi închise ca neidentificate.',
         },
         en: {
-            btnYesTitle:   'Resolved',
-            btnNoTitle:    'Not resolved',
-            btnAskTitle:   'Request information',
-            btnCfgTitle:   'Settings',
+            btnYesTitle: 'Resolved',
+            btnNoTitle: 'Not resolved',
+            btnAskTitle: 'Request information',
+            btnCfgTitle: 'Settings',
             settingsTitle: '⚙ Quick Answers Settings',
-            labelText:     'Text:',
-            labelSend:     'Message',
-            labelClose:    'Close UR',
-            labelStatus:   'Status:',
-            statusSolved:  'Resolved',
-            statusNotId:   'Not identified',
-            statusOpen:    'Open',
-            btnReset:      'Reset to defaults',
-            btnCancel:     'Cancel',
-            btnSave:       'Save',
-            confirmReset:  'Reset all settings to default values?',
-            sectionYes:    '✓ Resolved',
-            sectionNo:     '✗ Not resolved',
-            sectionAsk:    '? Request information',
-            savedOk:       'Settings saved',
-            noUrId:        'Could not determine UR ID',
-            noSession:     'UR session not loaded, comment skipped',
-            commentSent:   'Comment sent',
-            closedAs:      'Closed as',
-            panelAdded:    'Buttons added to UR panel',
-            observerOn:    'MutationObserver started',
+            labelText: 'Text:',
+            labelSend: 'Message',
+            labelClose: 'Close UR',
+            labelStatus: 'Status:',
+            statusSolved: 'Resolved',
+            statusNotId: 'Not identified',
+            statusOpen: 'Open',
+            btnReset: 'Reset to defaults',
+            btnCancel: 'Cancel',
+            btnSave: 'Save',
+            confirmReset: 'Reset all settings to default values?',
+            sectionYes: '✓ Resolved',
+            sectionNo: '✗ Not resolved',
+            sectionAsk: '? Request information',
+            savedOk: 'Settings saved',
+            noUrId: 'Could not determine UR ID',
+            noSession: 'UR session not loaded, comment skipped',
+            commentSent: 'Comment sent',
+            closedAs: 'Closed as',
+            panelAdded: 'Buttons added to UR panel',
+            observerOn: 'MutationObserver started',
             clipboardFallback: 'Textarea not found — text copied to clipboard',
-            defaultYes:    'Thank you for your help!\nThe issue has been resolved. Map updates will appear within a few days.\nJoin our communities on social media.\nAll links can be found at http://waze.com.ua',
-            defaultNo:     'Unfortunately, we did not receive enough information to fix the error.\nIf the issue recurs or you have any comments, please submit a new report.\nJoin our communities on social media.\nAll links can be found at http://waze.com.ua',
-            defaultAsk:    'Thank you for your attention.\nPlease provide more detailed information about the error.\nReports without comments will be closed as not identified.',
+            defaultYes: 'Thank you for your help!\nThe issue has been resolved. Map updates will appear within a few days.\nJoin our communities on social media.\nAll links can be found at http://waze.com.ua',
+            defaultNo: 'Unfortunately, we did not receive enough information to fix the error.\nIf the issue recurs or you have any comments, please submit a new report.\nJoin our communities on social media.\nAll links can be found at http://waze.com.ua',
+            defaultAsk: 'Thank you for your attention.\nPlease provide more detailed information about the error.\nReports without comments will be closed as not identified.',
         },
     };
 
@@ -142,16 +142,16 @@
     // =========================================================================
     function getDefaults() {
         return {
-            yes: { text: T.defaultYes, sendComment: true,  closeReport: true,  closeAs: 'solved'        },
-            no:  { text: T.defaultNo,  sendComment: true,  closeReport: true,  closeAs: 'not-identified' },
-            ask: { text: T.defaultAsk, sendComment: false, closeReport: false, closeAs: 'open'           },
+            yes: { text: T.defaultYes, sendComment: true, closeReport: true, closeAs: 'solved' },
+            no: { text: T.defaultNo, sendComment: true, closeReport: true, closeAs: 'not-identified' },
+            ask: { text: T.defaultAsk, sendComment: false, closeReport: false, closeAs: 'open' },
         };
     }
 
     // =========================================================================
     // Утиліти
     // =========================================================================
-    function log(msg)       { console.log(`[${SCRIPT_NAME}] ${msg}`); }
+    function log(msg) { console.log(`[${SCRIPT_NAME}] ${msg}`); }
     function logErr(msg, e) { console.error(`[${SCRIPT_NAME}] ✖ ${msg}`, e); }
 
     function loadSettings() {
@@ -165,23 +165,27 @@
     function saveSettings(s) { localStorage.setItem(LS_KEY, JSON.stringify(s)); }
 
     function escHtml(s) {
-        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
-
     // =========================================================================
-    // Отримати ID відкритого UR
-    // Читаємо з React internal props картки wz-card.problem-edit.
-    // Шлях: __reactProps$* → children[0].props.model.adapter.attributes.attributes.id
-    // Це єдиний надійний спосіб: data-id="null", URL статичний, SDK не має selected.
+    // Отримати ID відкритого UR через React internal props.
+    // Пробуємо кілька шляхів — WME змінює структуру після оновлень.
     // =========================================================================
     function getOpenUrId() {
         const card = document.querySelector('wz-card.problem-edit');
-        if (!card) { log('⚠ getOpenUrId: wz-card.problem-edit не знайдено'); return null; }
+        if (!card) { log('getOpenUrId: wz-card.problem-edit не знайдено'); return null; }
         const propsKey = Object.getOwnPropertyNames(card).find(k => k.startsWith('__reactProps$'));
-        if (!propsKey) { log('⚠ getOpenUrId: __reactProps$ не знайдено'); return null; }
-        const adapter = card[propsKey]?.children?.[0]?.props?.model?.adapter;
-        const id = adapter?.attributes?.attributes?.id;
-        if (!id) { log('⚠ getOpenUrId: id не знайдено в React props'); return null; }
+        if (!propsKey) { log('getOpenUrId: __reactProps$ не знайдено'); return null; }
+        const child = card[propsKey]?.children?.[0]?.props;
+        // Шлях 1 (новий): children[0].props.adapter.attributes.attributes.id
+        const id1 = child?.adapter?.attributes?.attributes?.id;
+        // Шлях 2 (новий alt): children[0].props.adapter.problem.attributes.id
+        const id2 = child?.adapter?.problem?.attributes?.id;
+        // Шлях 3 (старий): children[0].props.model.adapter.attributes.attributes.id
+        const id3 = child?.model?.adapter?.attributes?.attributes?.id;
+        const id = id1 ?? id2 ?? id3;
+        if (!id) { log('getOpenUrId: id не знайдено в React props'); return null; }
+        log('getOpenUrId: ID=' + id + ' (шлях ' + (id1 ? 1 : id2 ? 2 : 3) + ')');
         return Number(id);
     }
 
@@ -199,21 +203,21 @@
         const wzta = card.querySelector('wz-textarea');
         const ta = wzta?.shadowRoot?.querySelector('textarea');
         if (!ta) {
-            try { await navigator.clipboard.writeText(text); } catch (_) {}
+            try { await navigator.clipboard.writeText(text); } catch (_) { }
             log(T.clipboardFallback);
             return false;
         }
         // Stencil слухає native DOM events на своїй textarea
         ta.focus();
         ta.value = text;
-        ta.dispatchEvent(new Event('input',  { bubbles: true, composed: true }));
+        ta.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
         ta.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
         ta.setSelectionRange(text.length, text.length);
         log('Текст успішно вставлено у textarea');
         return true;
     }
 
-async function sendComment(urId, text) {
+    async function sendComment(urId, text) {
         try {
             await sdk.DataModel.MapUpdateRequests.getUpdateRequestDetails({
                 mapUpdateRequestId: urId,
@@ -289,11 +293,11 @@ async function sendComment(urId, text) {
         bar.style.cssText = 'position:absolute;top:8px;left:0;right:0;display:flex;justify-content:space-between;padding:0 8px;z-index:9999;pointer-events:none;';
 
         const BTN_STYLE = [
-            'width:26px','height:26px','border:none','border-radius:50%',
-            'color:#fff','font-size:14px','font-weight:bold',
-            'cursor:pointer','display:flex','align-items:center','justify-content:center',
-            'padding:0','line-height:1','box-shadow:0 1px 3px rgba(0,0,0,.35)',
-            'transition:opacity .15s','pointer-events:auto',
+            'width:26px', 'height:26px', 'border:none', 'border-radius:50%',
+            'color:#fff', 'font-size:14px', 'font-weight:bold',
+            'cursor:pointer', 'display:flex', 'align-items:center', 'justify-content:center',
+            'padding:0', 'line-height:1', 'box-shadow:0 1px 3px rgba(0,0,0,.35)',
+            'transition:opacity .15s', 'pointer-events:auto',
         ].join(';');
 
         const makeBtn = (icon, title, color, onClick) => {
@@ -318,8 +322,8 @@ async function sendComment(urId, text) {
         rightGroup.style.cssText = 'display:flex;gap:4px;pointer-events:auto;';
         [
             { key: 'yes', icon: '\u2713', title: T.btnYesTitle, color: '#27ae60' },
-            { key: 'no',  icon: '\u2717', title: T.btnNoTitle,  color: '#e74c3c' },
-            { key: 'ask', icon: '?',       title: T.btnAskTitle, color: '#f39c12' },
+            { key: 'no', icon: '\u2717', title: T.btnNoTitle, color: '#e74c3c' },
+            { key: 'ask', icon: '?', title: T.btnAskTitle, color: '#f39c12' },
         ].forEach(({ key, icon, title, color }) => {
             rightGroup.appendChild(makeBtn(icon, title, color, () => performAction(key)));
         });
@@ -346,8 +350,8 @@ async function sendComment(urId, text) {
 
         const SECTIONS = [
             { key: 'yes', label: T.sectionYes, color: '#27ae60' },
-            { key: 'no',  label: T.sectionNo,  color: '#e74c3c' },
-            { key: 'ask', label: T.sectionAsk,  color: '#f39c12' },
+            { key: 'no', label: T.sectionNo, color: '#e74c3c' },
+            { key: 'ask', label: T.sectionAsk, color: '#f39c12' },
         ];
 
         let html = `
@@ -375,9 +379,9 @@ async function sendComment(urId, text) {
                     <label style="display:flex;align-items:center;gap:4px;margin-left:auto;">
                         ${T.labelStatus}
                         <select id="qa-state-${key}" style="padding:2px 4px;border-radius:3px;border:1px solid #ccc;">
-                            <option value="solved"         ${cfg.closeAs==='solved'         ? 'selected':''} >${T.statusSolved}</option>
-                            <option value="not-identified" ${cfg.closeAs==='not-identified' ? 'selected':''} >${T.statusNotId}</option>
-                            <option value="open"           ${cfg.closeAs==='open'           ? 'selected':''} >${T.statusOpen}</option>
+                            <option value="solved"         ${cfg.closeAs === 'solved' ? 'selected' : ''} >${T.statusSolved}</option>
+                            <option value="not-identified" ${cfg.closeAs === 'not-identified' ? 'selected' : ''} >${T.statusNotId}</option>
+                            <option value="open"           ${cfg.closeAs === 'open' ? 'selected' : ''} >${T.statusOpen}</option>
                         </select></label>
                 </div>
             </div>`;
@@ -407,10 +411,10 @@ async function sendComment(urId, text) {
             const s = {};
             SECTIONS.forEach(({ key }) => {
                 s[key] = {
-                    text:        document.getElementById(`qa-text-${key}`).value,
+                    text: document.getElementById(`qa-text-${key}`).value,
                     sendComment: document.getElementById(`qa-send-${key}`).checked,
                     closeReport: document.getElementById(`qa-close-${key}`).checked,
-                    closeAs:     document.getElementById(`qa-state-${key}`).value,
+                    closeAs: document.getElementById(`qa-state-${key}`).value,
                 };
             });
             saveSettings(s);
