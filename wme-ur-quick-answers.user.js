@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME UR Quick Answers
 // @namespace    https://github.com/SapozhnikUA/WME-UR-Quick-Answers
-// @version      1.15
+// @version      1.16
 // @description  Швидкі відповіді на UR — кнопки ✓ ✗ ? у панелі звіту
 // @homepageURL  https://github.com/SapozhnikUA/WME-UR-Quick-Answers
 // @downloadURL  https://raw.githubusercontent.com/SapozhnikUA/WME-UR-Quick-Answers/main/wme-ur-quick-answers.user.js
@@ -20,6 +20,10 @@
     const LS_KEY = 'WMEQuickAnswers_settings';
 
     let sdk = null;
+    // ID UR, який WME SDK повідомив через wme-update-request-panel-opened.
+    // Тримаємо його окремо від DOM, щоб основний шлях getOpenUrId()
+    // не залежав від приватних React-полів типу __reactProps$.
+    let currentUrId = null;
 
     // =========================================================================
     // Локалізація — визначаємо мову за URL редактора
@@ -168,10 +172,47 @@
         return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
     // =========================================================================
-    // Отримати ID відкритого UR через React internal props.
-    // Пробуємо кілька шляхів — WME змінює структуру після оновлень.
+    // Відстеження відкритого UR через Waze SDK
+    // =========================================================================
+    function registerOpenUrTracking() {
+        try {
+            sdk.Events.on({
+                eventName: 'wme-update-request-panel-opened',
+                eventHandler: ({ updateRequestId }) => {
+                    const id = Number(updateRequestId);
+
+                    if (Number.isFinite(id)) {
+                        currentUrId = id;
+                        log(`getOpenUrId: ID=${id} (SDK event)`);
+                    } else {
+                        currentUrId = null;
+                        log('getOpenUrId: SDK event повернув некоректний updateRequestId');
+                    }
+                },
+            });
+        } catch (e) {
+            // Якщо WME тимчасово змінить/вимкне подію SDK, скрипт не падає:
+            // getOpenUrId() нижче все одно спробує старий DOM/React fallback.
+            logErr('registerOpenUrTracking', e);
+        }
+    }
+
+    // =========================================================================
+    // Отримати ID відкритого UR.
+    // Основний шлях — кеш із події Waze SDK wme-update-request-panel-opened.
+    // Fallback нижче потрібен лише для edge case, коли панель UR уже відкрита,
+    // а listener ще не встиг отримати подію відкриття.
     // =========================================================================
     function getOpenUrId() {
+        if (Number.isFinite(currentUrId)) {
+            return currentUrId;
+        }
+
+        log('getOpenUrId: SDK cache порожній, fallback до React props');
+        return getOpenUrIdFromReactProps();
+    }
+
+    function getOpenUrIdFromReactProps() {
         const card = document.querySelector('wz-card.problem-edit');
         if (!card) { log('getOpenUrId: wz-card.problem-edit не знайдено'); return null; }
         const propsKey = Object.getOwnPropertyNames(card).find(k => k.startsWith('__reactProps$'));
@@ -429,19 +470,30 @@
     // =========================================================================
     function watchForUrPanel() {
         let lastCard = null;
-        const observer = new MutationObserver(() => {
+
+        const handle = () => {
             const card = document.querySelector('wz-card.problem-edit');
+
             if (card && card !== lastCard) {
                 lastCard = card;
                 injectButtons(card);
             }
+
             if (!card && lastCard) {
                 lastCard = null;
+                currentUrId = null; // Панель закрилась — старий SDK ID більше не можна використовувати.
                 const oldBar = document.getElementById('qa-btn-bar');
                 if (oldBar) oldBar.remove();
             }
-        });
+        };
+
+        const observer = new MutationObserver(handle);
         observer.observe(document.body, { childList: true, subtree: true });
+
+        // Якщо скрипт стартував після того, як панель уже з'явилася,
+        // не чекаємо наступної DOM-мутації, а одразу пробуємо додати кнопки.
+        handle();
+
         log(T.observerOn);
     }
 
@@ -453,6 +505,10 @@
         try {
             sdk = window.getWmeSdk({ scriptId: SCRIPT_ID, scriptName: SCRIPT_NAME });
         } catch (e) { logErr('getWmeSdk', e); return; }
+
+        // Реєструємо listener одразу після отримання SDK, а не всередині wme-ready:
+        // так менший шанс пропустити відкриття UR на швидкому старті/перезавантаженні.
+        registerOpenUrTracking();
 
         sdk.Events.once({ eventName: 'wme-ready' }).then(() => {
             log(`Готово [${LANG}]`);
